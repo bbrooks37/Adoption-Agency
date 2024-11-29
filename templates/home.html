@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Adoption Agency</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container">
+    <h1 class="my-4">Pet Adoption Agency</h1>
+    <a href="{{ url_for('add_pet') }}" class="btn btn-primary mb-3">Add Pet</a>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Available Pets</h2>
+            <ul class="list-group">
+            {% for pet in available_pets %}
+                <li class="list-group-item">
+                    <strong>{{ pet.name }}</strong> - {{ pet.species }}
+                    {% if pet.photo_url %}
+                        <img src="{{ pet.photo_url }}" alt="{{ pet.name }}" class="img-thumbnail" width="100">
+                    {% endif %}
+                    <span class="badge badge-success">Available</span>
+                    <a href="{{ url_for('show_edit_pet', pet_id=pet.id) }}" class="btn btn-sm btn-warning float-right">Edit</a>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+
+        <div class="col-md-6">
+            <h2>No Longer Available</h2>
+            <ul class="list-group">
+            {% for pet in unavailable_pets %}
+                <li class="list-group-item">
+                    <strong>{{ pet.name }}</strong> - {{ pet.species }}
+                    {% if pet.photo_url %}
+                        <img src="{{ pet.photo_url }}" alt="{{ pet.name }}" class="img-thumbnail" width="100">
+                    {% endif %}
+                    <span class="badge badge-secondary">Not Available</span>
+                    <a href="{{ url_for('show_edit_pet', pet_id=pet.id) }}" class="btn btn-sm btn-warning float-right">Edit</a>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
