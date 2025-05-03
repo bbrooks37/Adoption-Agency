@@ -1,5 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, IntegerField, BooleanField
@@ -7,9 +6,78 @@ from wtforms.validators import InputRequired, URL, Optional, AnyOf, NumberRange
 from flask_debugtoolbar import DebugToolbarExtension
 import os
 from werkzeug.utils import secure_filename
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
-if not os.path.exists('static/uploads'):
-    os.makedirs('static/uploads')
+# Configuration
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# Database setup (using SQLite for simplicity)
+engine = create_engine('sqlite:///adopt.db', echo=True)
+Base = declarative_base()
+Session = sessionmaker(bind=engine)
+
+# Define the Pet model
+class Pet(Base):
+    __tablename__ = 'pets'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+    species = Column(String(30), nullable=False)
+    photo_url = Column(String(255), nullable=True)
+    age = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+    available = Column(Boolean, nullable=False, default=True)
+
+Base.metadata.create_all(engine)  # Create tables
+
+# Flask-WTF Form
+class AddPetForm(FlaskForm):
+    name = StringField('Pet Name', validators=[InputRequired()])
+    species = StringField('Species', validators=[InputRequired(), AnyOf(['cat', 'dog', 'porcupine'])])
+    photo = FileField('Photo', validators=[Optional(), FileAllowed(ALLOWED_EXTENSIONS, 'Images only!')])  # Changed to FileField
+    photo_url = StringField('Photo URL', validators=[Optional(), URL()])
+    age = IntegerField('Age', validators=[Optional(), NumberRange(min=0, max=30)])
+    notes = StringField('Notes', validators=[Optional()])
+    available = BooleanField('Available', default=True)
+
+# Flask application setup
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.urandom(24)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER  # Corrected variable name
+
+toolbar = DebugToolbarExtension(app)
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
+
+# Route to add a pet
+@app.route('/add', methods=['GET', 'POST'])
+def add_pet():
+    form = AddPetForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        species = form.species.data
+        age = form.age.data
+        notes = form.notes.data
+        available = form.available.data
+        photo_url = None # Initialize photo_url
+
+        if form.photo.data:  # Check if a file was uploaded
+            photo = form.photo.data
+            filename = secure_filename(photo.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(filepath)  # Save the file
+            photo_url = filepath  # Store the file path
+
+
+        new_pet = Pet(name=name, species=species, photo_url=photo_url, age=age, notes=notes, available=available)
+        session = Session()
+        session.add(new_pet)
+        session.commit()
+        session.close()
+        flash('Pet added successfully!', 'success')
+        return redirect(url_for('home'))
+    return render_template('add_pet.html', form=form)
 
 def create_app():
     app = Flask(__name__)
